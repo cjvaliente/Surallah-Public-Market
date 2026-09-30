@@ -1,0 +1,32 @@
+const facilitiesData =  {
+"type": "FeatureCollection",
+"name": "Facilities",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{"type":"Feature","properties":{"id":1,"Type":"Comfort Room"},"geometry":{"type":"Point","coordinates":[124.747642868617689,6.37250565575822]}},
+{"type":"Feature","properties":{"id":2,"Type":"Comfort Room"},"geometry":{"type":"Point","coordinates":[124.748235217138642,6.37215608386725]}},
+{"type":"Feature","properties":{"id":4,"Type":"Comfort Room"},"geometry":{"type":"Point","coordinates":[124.748218729087,6.372713092576749]}},
+{"type":"Feature","properties":{"id":3,"Type":"Comfort Room"},"geometry":{"type":"Point","coordinates":[124.747863319974428,6.372910940371153]}},
+{"type":"Feature","properties":{"id":null,"Type":"Stairs"},"geometry":{"type":"Point","coordinates":[124.748290299444363,6.373047370339534]}},
+{"type":"Feature","properties":{"id":null,"Type":"Table"},"geometry":{"type":"Point","coordinates":[124.748427577740728,6.372898984540345]}},
+{"type":"Feature","properties":{"id":null,"Type":"Table"},"geometry":{"type":"Point","coordinates":[124.748389105620276,6.372832226089084]}},
+{"type":"Feature","properties":{"id":null,"Type":"Table"},"geometry":{"type":"Point","coordinates":[124.748362236202837,6.37278367448271]}},
+{"type":"Feature","properties":{"id":null,"Type":"Table"},"geometry":{"type":"Point","coordinates":[124.748323153413835,6.372715702226067]}},
+{"type":"Feature","properties":{"id":null,"Type":"Table"},"geometry":{"type":"Point","coordinates":[124.748532002067591,6.372841329514766]}},
+{"type":"Feature","properties":{"id":null,"Type":"Table"},"geometry":{"type":"Point","coordinates":[124.748485591255658,6.37277578484624]}},
+{"type":"Feature","properties":{"id":null,"Type":"Table"},"geometry":{"type":"Point","coordinates":[124.748461775181084,6.372729660815219]}},
+{"type":"Feature","properties":{"id":null,"Type":"Table"},"geometry":{"type":"Point","coordinates":[124.748422081723504,6.372663509237174]}},
+{"type":"Feature","properties":{"id":null,"Type":"Bench"},"geometry":{"type":"Point","coordinates":[124.747826139372776,6.372289907461271]}},
+{"type":"Feature","properties":{"id":null,"Type":"Bench"},"geometry":{"type":"Point","coordinates":[124.747957088708347,6.37220966284746]}},
+{"type":"Feature","properties":{"id":null,"Type":"Bench"},"geometry":{"type":"Point","coordinates":[124.748312566983685,6.373148832675984]}},
+{"type":"Feature","properties":{"id":null,"Type":"Bench"},"geometry":{"type":"Point","coordinates":[124.748447657009734,6.37307373207379]}},
+{"type":"Feature","properties":{"id":null,"Type":"Bench"},"geometry":{"type":"Point","coordinates":[124.747997667474706,6.372762733161634]}},
+{"type":"Feature","properties":{"id":null,"Type":"Bench"},"geometry":{"type":"Point","coordinates":[124.748292691669491,6.372595968533337]}},
+{"type":"Feature","properties":{"id":null,"Type":"Bench"},"geometry":{"type":"Point","coordinates":[124.74826681235416,6.372607285073676]}},
+{"type":"Feature","properties":{"id":null,"Type":"Bench"},"geometry":{"type":"Point","coordinates":[124.748072199902865,6.37271582097063]}},
+{"type":"Feature","properties":{"id":null,"Type":null},"geometry":{"type":"Point","coordinates":[124.74775621356001,6.372902488471779]}},
+{"type":"Feature","properties":{"id":null,"Type":"Office"},"geometry":{"type":"Point","coordinates":[124.748118008228232,6.372769794073726]}},
+{"type":"Feature","properties":{"id":null,"Type":"Office"},"geometry":{"type":"Point","coordinates":[124.74813841018323,6.372806966531649]}},
+{"type":"Feature","properties":{"id":null,"Type":"Stairs"},"geometry":{"type":"Point","coordinates":[124.747727643738941,6.372905318646939]}}
+]
+}

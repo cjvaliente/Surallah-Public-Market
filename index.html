@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surallah Market Directory</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <style>
+        :root {
+            --primary-color: #1a202c;
+            --accent-color: #3182ce;
+            --bg-light: #f7fafc;
+            --border-color: #e2e8f0;
+            --text-muted: #718096;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Sidebar Layout */
+        #sidebar {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 360px;
+            max-height: calc(100vh - 30px);
+            background: white;
+            z-index: 1000;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .sidebar-header h2 { margin: 0; font-size: 20px; font-weight: 700; }
+        .sidebar-header p { margin: 4px 0 0 0; font-size: 13px; color: #a0aec0; }
+
+        /* Search Bar */
+        .search-container {
+            padding: 15px;
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon { position: absolute; left: 25px; color: var(--text-muted); }
+
+        #search-input {
+            width: 100%;
+            padding: 10px 10px 10px 35px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #search-input:focus { border-color: var(--accent-color); }
+
+        .results-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 15px;
+            right: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1010;
+            display: none;
+            border: 1px solid var(--border-color);
+        }
+
+        .result-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-item:hover { background: #edf2f7; }
+
+        /* Interactive Record Layout */
+        .details-card {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+            background: var(--bg-light);
+        }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .placeholder-icon { font-size: 48px; margin-bottom: 12px; color: #cbd5e0; }
+        .info-title { font-size: 20px; font-weight: 700; color: var(--primary-color); margin: 0 0 12px 0; line-height: 1.3; }
+
+        .info-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .badge-occupied { background: #fed7d7; color: #9b2c2c; }
+        .badge-vacant { background: #c6f6d5; color: #22543d; }
+
+        .info-meta {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: var(--text-muted); font-weight: 500; }
+        .info-value { color: var(--primary-color); font-weight: 600; text-align: right; max-width: 60%; word-wrap: break-word; }
+
+        /* Map Display Workspace Canvas */
+        #map {
+            width: 100%;
+            height: 100vh; 
+            min-height: 400px;
+            background-color: #e5e5e5;
+        }
+
+        /* Modern Vertical Floor Button Switcher Layout Panel */
+        .floor-selector-wrapper {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: white;
+            padding: 6px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .floor-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .floor-btn.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .leaflet-left .leaflet-control { margin-left: 390px; }
+        .leaflet-top .leaflet-control { margin-top: 15px; }
+
+        /* Icon wrapper for the facilities */
+        .facility-icon-wrapper {
+            background: white;
+            color: #4a5568;
+            font-size: 14px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid #a0aec0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            width: 24px; height: 24px;
+        }
+
+        .info.legend {
+            background: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            color: #333;
+            font-family: Arial, sans-serif;
+            line-height: 1.5;
+            margin-right: 80px !important; 
+            margin-bottom: 30px !important;
+            position: relative;
+            z-index: 9999 !important; 
+        }
+
+        .info.legend h4 {
+            margin: 0 0 10px 0;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            margin-right: 10px;
+            color: #4b5563; 
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>Surallah Public Market</h2>
+            <p>Interactive GIS-Based Public Market Directory</p>
+        </div>
+        
+        <div class="search-container">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="search-input" placeholder="Search tenant, category, or stall ID...">
+            <div id="search-results" class="results-dropdown"></div>
+        </div>
+
+        <div id="details-panel" class="details-card empty-state">
+            <div id="details-content">
+                <i class="fa-solid fa-shop placeholder-icon"></i>
+                <p>Select a market stall or use the search field above to explore real-time directory data.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="floor-selector-wrapper">
+        <button class="floor-btn" data-floor="2">2F</button>
+        <button class="floor-btn active" data-floor="1">1F</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    // Public Market
+    <script src="PubMar.js"></script> 
+    <script src="Road.js"></script> 
+    <script src="MainStructure.js"></script> 
+    <script src="Facilities.js"></script> 
+    <script src="Amenities.js"></script> 
+    <script src="BuildingStructure1F.js"></script>
+    <script src="Stalls1F.js"></script>
+    <script src="BuildingStructure2F.js"></script>
+    <script src="Stalls2F.js"></script>
+    <script src="Doors.js"></script>
+    <script src="RoomFacilities.js"></script>
+    <script src="RoomFacilities2F.js"></script>
+    <script src="Facilities2F.js"></script>
+
+    // Street Foods
+    <script src="PlazaStruct.js"></script>
+    <script src="PlazaRoadLine.js"></script>
+    <script src="PlazaMainStruct.js"></script>
+    <script src="Fountain.js"></script>
+    <script src="Building.js"></script>
+    <script src="StreetFoodsStalls.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+    if (typeof L === 'undefined') {
+        document.getElementById('map').innerHTML = `
+            <div style="padding: 40px; color: #742a2a; text-align: center; margin-left: 360px;">
+                <h2 style="font-family: sans-serif;">⚠️ Map Engine Failed to Load</h2>
+                <p style="font-family: sans-serif;">Please check your internet connection.</p>
+            </div>`;
+        return; 
+    }
+
+    const map = L.map('map', {
+        zoomControl: true,
+        maxZoom: 22
+    }).setView([6.374100, 124.747800], 18);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 22,
+        attribution: 'CJValiente_Built with QGIS, © OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Dynamic Map Legend Creation Engine
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function () {
+        const div = L.DomUtil.create('div', 'info legend');
+        div.innerHTML = `<h4>Map Legend</h4>`;
+        return div;
+    };
+    legend.addTo(map);
+
+    function updateLegend(floorStr) {
+        const target = document.querySelector('.info.legend');
+        if (!target) return;
+
+        if (floorStr === "1") {
+            target.innerHTML = `
+                <h4>Map Legend</h4>
+                <div class="legend-item"><span class="legend-icon" style="background:#c6f6d5; border:1px solid #22543d;"></span> Vacant</div>
+                <div class="legend-item"><span class="legend-icon" style="background:#fed7d7; border:1px solid #9b2c2c;"></span> Occupied (Unpaid)</div>
+                <div class="legend-item"><span class="legend-icon" style="background:#e8e337; border:1px solid #2b6cb0;"></span> Occupied (Paid)</div>
+                <div class="legend-item"><span class="legend-icon"><i class="fa-solid fa-restroom"></i></span> Comfort Room</div>
+                <div class="legend-item"><span class="legend-icon"><i class="fa-solid fa-stairs"></i></span> Stairs</div>
+                <div class="legend-item"><span class="legend-icon"><i class="fa-solid fa-utensils"></i></span> Eatery</div>
+                <div class="legend-item"><span class="legend-icon"><i class="fa-solid fa-chair"></i></span> Bench</div>
+            `;
+        } else {
+            target.innerHTML = `
+                <h4>Map Legend (Floor 2)</h4>
+                <div class="legend-item"><span class="legend-icon" style="background:#c6f6d5; border:1px solid #22543d;"></span> Vacant Space</div>
+                <div class="legend-item"><span class="legend-icon" style="background:#fed7d7; border:1px solid #9b2c2c;"></span> Occupied (Unpaid)</div>
+                <div class="legend-item"><span class="legend-icon" style="background:#e8e337; border:1px solid #2b6cb0;"></span> Occupied (Paid)</div>
+                <div class="legend-item"><span class="legend-icon"><i class="fa-solid fa-briefcase"></i></span> Office</div>
+            `;
+        }
+    }
+
+    // ISOLATED DATABASE MAPS TO AVOID STALL ID OVERLAPS 
+    const liveDataMapMarket = new Map();
+    const liveDataMapPlaza = new Map();
+
+    const marketLayers= {
+                "1": { 
+                    building: L.layerGroup(), 
+                    booths: L.layerGroup(),
+                    amenities: L.layerGroup(),
+                    facilities: L.layerGroup()
+                },
+                "2": { 
+                    building: L.layerGroup(), 
+                    booths: L.layerGroup(),
+                    facilities: L.layerGroup() 
+                }
+            };
+
+    const plazaLayers = {
+        "1": { structural: L.layerGroup(), booths: L.layerGroup() }
+    };
+
+    let allSearchableFeatures = [];
+    let currentFloor = "1";
+
+    // Styles
+    const buildingStyle = { color: "#2d3748", fillColor: "#cbd5e0", weight: 2, fillOpacity: 0.65, interactive: false };
+    const defaultBoothStyle = { color: "#4a5568", fillColor: "#ebf8ff", weight: 1, fillOpacity: 0.5 }; // Note: Overwritten by live data
+    const roadStyle = { color: "#FFFFFF", weight: 8, opacity: 1.5, interactive: false };
+    const plazaBaseStyle = { color: "#f2dad9", fillColor: "#f2dad9", weight: 1, fillOpacity: 0.95, interactive: false };
+    const fountainStyle = { color: " #2d3748", fillColor: "#97CADB", weight: 2, fillOpacity: 0.8, interactive: false };
+    const mainStructureStyle = { color: "#718096", fillColor: "#e2e8f0", weight: 2, fillOpacity: 0.8, interactive: false };
+    const amenitiesStyle = { color: "#4c2238", weight: 2, fillOpacity: 0.4, interactive: false };
+    
+
+    const vacantStyle = { color: "#22543d", fillColor: "#c6f6d5", weight: 1, fillOpacity: 0.8 };    
+    const occupiedStyle = { color: "#9b2c2c", fillColor: "#fed7d7", weight: 1, fillOpacity: 0.85 };  
+    const occupiedPaidStyle = { color: "#2b6cb0", fillColor: "#e8e337", weight: 1, fillOpacity: 0.85 }; 
+    const highlightStyle = { color: "#3182ce", fillColor: "#63b3ed", weight: 3, fillOpacity: 0.95 };
+
+    function switchFloor(floorStr) {
+        currentFloor = floorStr;
+        updateLegend(floorStr);
+
+        if (floorStr === "1") {
+            // Display Market 1F
+            map.addLayer(marketLayers["1"].building);
+            map.addLayer(marketLayers["1"].booths);
+            // Hide Market 2F
+            map.removeLayer(marketLayers["2"].building);
+            map.removeLayer(marketLayers["2"].booths);
+            // Show SFStalls
+            map.addLayer(plazaLayers["1"].booths);
+        } else {
+            // Display Market 2F
+            map.addLayer(marketLayers["2"].building);
+            map.addLayer(marketLayers["2"].booths);
+            // Hide Market 1F
+            map.removeLayer(marketLayers["1"].building);
+            map.removeLayer(marketLayers["1"].booths);
+            map.removeLayer(plazaLayers["1"].booths);
+        }
+
+        document.querySelectorAll('.floor-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-floor') === floorStr);
+        });
+    }
+
+    document.querySelectorAll('.floor-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchFloor(btn.getAttribute('data-floor')));
+    });
+
+    // Unified Data Identifier Compiler
+    function generateLongStallId(feature, zone) {
+        const props = feature.properties || {};
+        const rawId = props.ID !== undefined ? props.ID : (props.id !== undefined ? props.id : (props.stall_id || props.STALL_ID || ''));
+        const paddedId = String(rawId).trim().padStart(2, '0');
+        
+        if (zone === 'plaza') {
+            return `Plaza Street Food Stall - ${paddedId}`;
+        }
+        
+        let bldgVal = props.Building || props.building || 'A';
+        bldgVal = String(bldgVal).trim();
+        
+        if (/existing/i.test(bldgVal)) {
+            bldgVal = bldgVal.replace(/Comeercial/i, 'Commercial');
+            return `${bldgVal} - ${paddedId}`;
+        } else if (/^[0-9]+[A-Z]+$/i.test(bldgVal)) {
+            return `Existing Commercial Building ${bldgVal.toUpperCase()} - ${paddedId}`;
+        } else {
+            return `Commercial Building ${bldgVal.toUpperCase()} - ${paddedId}`;
+        }
+    }
+
+    function applyLiveStatusColor(layer, stallId, zone) {
+        const targetMap = (zone === 'plaza') ? liveDataMapPlaza : liveDataMapMarket;
+        const liveInfo = targetMap.get(stallId);
+        
+        if (liveInfo) {
+            const status = String(liveInfo.status || '').toLowerCase().trim();
+            const payment = String(liveInfo.payment || '').toLowerCase().trim();
+            
+            const isOccupied = (status === 'occupied' || status === 'true');
+            const isPaid = (payment === 'paid' || payment === 'true');
+
+            if (isOccupied && isPaid) {
+                layer.setStyle(occupiedPaidStyle);
+            } else if (isOccupied) {
+                layer.setStyle(occupiedStyle);
+            } else {
+                layer.setStyle(vacantStyle);
+            }
+        } else {
+            layer.setStyle(vacantStyle);
+        }
+    }
+
+    function refreshAllMapColors() {
+        allSearchableFeatures.forEach(item => {
+            applyLiveStatusColor(item.layer, item.id, item.zone);
+        });
+    }
+
+    function handleBoothClick(e) {
+        const layer = e.target;
+        const feature = layer.feature;
+        
+        refreshAllMapColors(); 
+        layer.setStyle(highlightStyle); 
+        
+        const trackingData = allSearchableFeatures.find(item => item.layer === layer);
+        if (!trackingData) return;
+
+        const stallId = trackingData.id;
+        const zone = trackingData.zone;
+        const targetMap = (zone === 'plaza') ? liveDataMapPlaza : liveDataMapMarket;
+        const liveInfo = targetMap.get(stallId);
+        
+        const panel = document.getElementById('details-panel');
+        if (panel) panel.classList.remove('empty-state');
+        
+        if (liveInfo) {
+            const vendor = liveInfo.vendor || 'Vacant / Unassigned';
+            const category = liveInfo.category || 'N/A';
+            const email = liveInfo.email || 'N/A';
+            const phone = liveInfo.phone || 'N/A';
+            const address = liveInfo.address || 'N/A';
+            const clearance = liveInfo.clearance || 'N/A';
+            const stallnum = liveInfo.stallnum || 'N/A';
+            const store = liveInfo.store || 'N/A';
+            const payment = liveInfo.payment || 'N/A';
+            const rawDueDate = liveInfo.dueDate || 'N/A'; 
+            const businessregis = liveInfo.businessregis || 'N/A';
+            const sanitation = liveInfo.sanitation || 'N/A';
+            const fire = liveInfo.fire || 'N/A';
+            const health = liveInfo.health || 'N/A';
+            const envicert = liveInfo.envicert || 'N/A';
+            
+            const nextPaymentDate = computeNextPaymentDate(rawDueDate, payment); 
+            const status = String(liveInfo.status || 'Vacant').toLowerCase().trim();
+            const isOccupied = (status === 'occupied' || status === 'true');
+            const badgeClass = isOccupied ? 'badge-occupied' : 'badge-vacant';
+            const displayStatus = isOccupied ? 'Occupied' : 'Vacant';
+            
+            document.getElementById('details-content').innerHTML = `
+                <h3 class="info-title">${stallId}</h3>
+                <p style="margin: -5px 0 10px 0; font-size:11px; color:var(--text-muted); font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">Sector: ${zone.toUpperCase()}</p>
+                <span class="info-badge ${badgeClass}">${displayStatus}</span>
+                <div class="info-meta">
+                    <div class="info-row"><span class="info-label">Stall Number</span><span class="info-value">${stallnum}</span></div>
+                    <div class="info-row"><span class="info-label">Payment Status</span><span class="info-value">${payment}</span></div>
+                    <div class="info-row"><span class="info-label">Due Date</span><span class="info-value">${rawDueDate}</span></div>
+                    <div class="info-row"><span class="info-label">Next Payment Date</span><span class="info-value" style="color: ${payment.toLowerCase().trim() === 'paid' ? '#2f855a' : '#c53030'}; font-weight: bold;">${nextPaymentDate}</span></div>
+                    <div class="info-row"><span class="info-label">Tenant Name</span><span class="info-value">${vendor}</span></div>
+                    <div class="info-row"><span class="info-label">Store Name</span><span class="info-value">${store}</span></div>
+                    <div class="info-row"><span class="info-label">Category</span><span class="info-value">${category}</span></div>
+                    <div class="info-row"><span class="info-label">Contact Number</span><span class="info-value">${phone}</span></div>
+                    <div class="info-row"><span class="info-label">Contact Email</span><span class="info-value">${email}</span></div>
+                    <div class="info-row"><span class="info-label">Address</span><span class="info-value">${address}</span></div>
+                    <div class="info-row"><span class="info-label">Market Clearance</span><span class="info-value">${clearance}</span></div>
+                    <div class="info-row"><span class="info-label">Business Registration</span><span class="info-value">${businessregis}</span></div>
+                    <div class="info-row"><span class="info-label">Sanitation Clearance</span><span class="info-value">${sanitation}</span></div>
+                    <div class="info-row"><span class="info-label">Fire Safety</span><span class="info-value">${fire}</span></div>
+                    <div class="info-row"><span class="info-label">Health Clearance</span><span class="info-value">${health}</span></div>
+                    <div class="info-row"><span class="info-label">Environmental Cert</span><span class="info-value">${envicert}</span></div>
+                    <div class="info-row"><span class="info-label">Floor Level</span><span class="info-value">${currentFloor}F</span></div>
+                </div>
+            `;
+        } else {
+            document.getElementById('details-content').innerHTML = `
+                <h3 class="info-title">${stallId}</h3>
+                <span class="info-badge badge-vacant">Vacant</span>
+                <div class="info-meta">
+                    <div class="info-row"><span class="info-label">Stall Number</span><span class="info-value">N/A</span></div>
+                            <div class="info-row"><span class="info-label">Payment Status</span><span class="info-value">-</span></div>
+                            <div class="info-row"><span class="info-label">Vendor</span><span class="info-value" style="color:#718096; font-style:italic;">No active record</span></div>
+                            <div class="info-row"><span class="info-label">Store Name</span><span class="info-value">-</span></div>
+                            <div class="info-row"><span class="info-label">Category</span><span class="info-value">-</span></div>
+                            <div class="info-row"><span class="info-label">Contact Number</span><span class="info-value">-</span></div>
+                            <div class="info-row"><span class="info-label">Contact Email</span><span class="info-value">-</span></div>
+                            <div class="info-row"><span class="info-label">Address</span><span class="info-value">-</span></div>
+                            <div class="info-row"><span class="info-label">Market Clearance</span><span class="info-value">N/A</span></div>
+                            <div class="info-row"><span class="info-label">Business Registration</span><span class="info-value">N/A</span></div>
+                            <div class="info-row"><span class="info-label">Sanitation Clearance</span><span class="info-value">N/A</span></div>
+                            <div class="info-row"><span class="info-label">Fire Safety</span><span class="info-value">N/A</span></div>
+                            <div class="info-row"><span class="info-label">Health Clearance</span><span class="info-value">N/A</span></div>
+                            <div class="info-row"><span class="info-label">Environmental Certificate</span><span class="info-value">N/A</span></div>
+                            <div class="info-row"><span class="info-label">Floor Level</span><span class="info-value">${currentFloor}F</span></div>
+                </div>
+            `;
+        }
+    }
+
+    function computeNextPaymentDate(dueDateStr, paymentStatus) {
+        if (!dueDateStr || dueDateStr === 'N/A' || dueDateStr === '-') return 'N/A';
+        let date = new Date(dueDateStr);
+        if (isNaN(date.getTime())) {
+            const currentYear = new Date().getFullYear();
+            date = new Date(`${dueDateStr}, ${currentYear}`);
+        }
+        if (isNaN(date.getTime())) return dueDateStr;
+        if (String(paymentStatus).toLowerCase().trim() === 'paid') {
+            date.setMonth(date.getMonth() + 1);
+        }
+        return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    function setupSearchEngine() {
+        const input = document.getElementById('search-input');
+        const dropdown = document.getElementById('search-results');
+        
+        if(!input || !dropdown) return;
+
+        input.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            dropdown.innerHTML = '';
+            if (!query) { dropdown.style.display = 'none'; return; }
+            
+            const matches = allSearchableFeatures.filter(f => {
+                const targetMap = (f.zone === 'plaza') ? liveDataMapPlaza : liveDataMapMarket;
+                const info = targetMap.get(f.id) || {};
+                const vendorName = info.vendor || '';
+                const catName = info.category || '';
+                return f.id.toLowerCase().includes(query) || vendorName.toLowerCase().includes(query) || catName.toLowerCase().includes(query);
+            }).slice(0, 5);
+            
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="result-item" style="color:#718096; cursor:default;">No matching spaces found</div>`;
+                dropdown.style.display = 'block';
+                return;
+            }
+            
+            matches.forEach(m => {
+                const targetMap = (m.zone === 'plaza') ? liveDataMapPlaza : liveDataMapMarket;
+                const info = targetMap.get(m.id) || {};
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                div.innerHTML = `<strong>${m.id}</strong> <small style="color:#3182ce;">(${m.zone.toUpperCase()})</small><br><small style="color:#718096;">${info.vendor || 'Vacant Space'}</small>`;
+                div.addEventListener('click', () => {
+                    if (currentFloor !== m.floor) switchFloor(m.floor);
+                    map.flyTo(m.layer.getBounds().getCenter(), 21, { animate: true, duration: 0.8 });
+                    setTimeout(() => { m.layer.fire('click'); }, 900);
+                    input.value = info.vendor || m.id;
+                    dropdown.style.display = 'none';
+                });
+                dropdown.appendChild(div);
+            });
+            dropdown.style.display = 'block';
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) dropdown.style.display = 'none';
+        });
+    }
+
+    async function startApp() {
+        function processLocalLayer(jsonData, layerGroup, isBooth, floorNum, zone) {
+            if (!jsonData || !jsonData.features) return;
+            L.geoJSON(jsonData, {
+                style: isBooth ? defaultBoothStyle : buildingStyle,
+                onEachFeature: isBooth ? function(feature, layer) {
+                    const exactUID = generateLongStallId(feature, zone);
+                    allSearchableFeatures.push({ id: exactUID, floor: floorNum, layer: layer, zone: zone });
+                    layer.on({ click: handleBoothClick });
+                } : null
+            }).addTo(layerGroup);
+        }
+
+        function processFacilitiesLayer(jsonData, layerGroup, floorNum) {
+            if (!jsonData || !jsonData.features) return;
+            L.geoJSON(jsonData, {
+                filter: function(feature) {
+                    if (floorNum === "2") {
+                        return feature.properties.Type === "Office";
+                    } else {
+                        return ["Comfort Room", "Stairs", "Table", "Bench"].includes(feature.properties.Type);
+                    }
+                },
+                pointToLayer: function (feature, latlng) {
+                    let type = feature.properties.Type;
+                    let iconHtml = ''; 
+                    if (type === "Comfort Room") iconHtml = '<i class="fa-solid fa-restroom"></i>';
+                    else if (type === "Stairs") iconHtml = '<i class="fa-solid fa-stairs"></i>';
+                    else if (type === "Table") iconHtml = '<i class="fa-solid fa-utensils"></i>';
+                    else if (type === "Bench") iconHtml = '<i class="fa-solid fa-chair"></i>';
+                    else if (type === "Office") iconHtml = '<i class="fa-solid fa-briefcase"></i>';
+
+                    let customIcon = L.divIcon({
+                        html: `<div class="facility-icon-wrapper">${iconHtml}</div>`,
+                        className: '', iconSize: [24, 24], iconAnchor: [12, 12]
+                    });
+                    return L.marker(latlng, {icon: customIcon, interactive: false});
+                }
+            }).addTo(layerGroup);
+        }
+
+        const baseStructureLayer = L.layerGroup().addTo(map);
+
+        //Always visible na polygon
+        if (typeof pubMarData !== 'undefined') L.geoJSON(pubMarData, { style: { color: "#b84a4a", fillColor: "#b84a4a", weight: 2.5, fillOpacity: 0.750, interactive: false } }).addTo(baseStructureLayer);
+        if (typeof roadData !== 'undefined') L.geoJSON(roadData, { style: roadStyle }).addTo(baseStructureLayer);
+        if (typeof mainStructureData !== 'undefined') L.geoJSON(mainStructureData, { style: mainStructureStyle }).addTo(baseStructureLayer);
+
+        if (typeof plazaStructData !== 'undefined') L.geoJSON(plazaStructData, { style: plazaBaseStyle }).addTo(baseStructureLayer);
+        if (typeof plazaRoadData !== 'undefined') L.geoJSON(plazaRoadData, { style: roadStyle }).addTo(baseStructureLayer);
+        if (typeof plazamainstructData !== 'undefined') L.geoJSON(plazamainstructData, { style: buildingStyle }).addTo(baseStructureLayer);
+        if (typeof fountainData !== 'undefined') L.geoJSON(fountainData, { style: fountainStyle }).addTo(baseStructureLayer);
+        if (typeof buildingData !== 'undefined') L.geoJSON(buildingData, { style: buildingStyle }).addTo(baseStructureLayer);
+
+        // Floor 1 
+        if (typeof buildingStructure1FData !== 'undefined') processLocalLayer(buildingStructure1FData, marketLayers["1"].building, false, "1", "market");
+        if (typeof stalls1FData !== 'undefined') processLocalLayer(stalls1FData, marketLayers["1"].booths, true, "1", "market");
+        if (typeof facilitiesData !== 'undefined') processFacilitiesLayer(facilitiesData, marketLayers["1"].building, "1");
+        if (typeof amenitiesData !== 'undefined') L.geoJSON(amenitiesData, { style: amenitiesStyle }).addTo(marketLayers["1"].building); 
+        if (typeof roomFacilitiesData !== 'undefined') L.geoJSON(roomFacilitiesData, { style: { color: "#4a5568", fillColor: "#1E3A5F", weight: 1.5, fillOpacity: 0.6, interactive: false } }).addTo(marketLayers["1"].building);
+        if (typeof doorsData !== 'undefined') L.geoJSON(doorsData, { style: { color: "#744210", weight: 5, opacity: 0.9, dashArray: "10, 10", interactive: false } }).addTo(marketLayers["1"].building);
+        
+        // Floor 2 
+        if (typeof buildingStructure2FData !== 'undefined') processLocalLayer(buildingStructure2FData, marketLayers["2"].building, false, "2", "market");
+        if (typeof stalls2FData !== 'undefined') processLocalLayer(stalls2FData, marketLayers["2"].booths, true, "2", "market");
+        if (typeof roomFacilities2FData !== 'undefined') L.geoJSON(roomFacilities2FData, { style: { color: "#000000", fillColor: "#1E3A5F", weight: 1.5, fillOpacity: 1, interactive: false } }).addTo(marketLayers["2"].building);
+        if (typeof facilities2FData !== 'undefined') processFacilitiesLayer(facilities2FData, marketLayers["2"].building, "2");
+
+        // Plaza Interactive Layer
+        if (typeof SFStallsData !== 'undefined') processLocalLayer(SFStallsData, plazaLayers["1"].booths, true, "1", "plaza");
+
+        switchFloor("1");
+        setupSearchEngine();
+
+        function formatDueDate(value) {
+
+            if (!value || value === "N/A") return "N/A";
+
+            // Already formatted text
+            if (typeof value === "string" && /^[A-Za-z]/.test(value)) {
+                return value;
+            }
+
+            const date = new Date(value);
+
+            if (isNaN(date.getTime())) {
+                return value;
+            }
+
+            return date.toLocaleDateString("en-US", {
+                month: "long",
+                day: "2-digit",
+                year: "numeric"
+            });
+
+        }
+
+        // Normalization Row Processing Function
+        function mapSheetRow(r, targetMap, zone) {
+            let idVal = '';
+            let vendorVal = '';
+            let storeVal = '';
+            let catVal = '';
+            let statusVal = '';
+            let paymentVal = '';
+            let emailVal = '';
+            let phoneVal = '';
+            let addVal = '';
+            let clearVal = '';
+            let stallVal = '';
+            let dueDateVal = ''; 
+            let busregVal = '';
+            let sancertVal = '';
+            let firesafVal = '';
+            let healthclearVal = '';
+            let envicertVal = '';
+            
+            
+            for (let key in r) {
+                let cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+                
+                if (cleanKey === 'stallid' || cleanKey === 'id') {
+                    let rawSheetString = String(r[key]).trim();
+                    if (zone === 'plaza') {
+                        if (rawSheetString.toLowerCase().includes('plaza')) {
+                            let numMatch = rawSheetString.match(/\d+/);
+                            idVal = numMatch ? `Plaza Street Food Stall - ${numMatch[0].padStart(2, '0')}` : rawSheetString;
+                        } else {
+                            let numMatch = rawSheetString.match(/\d+/);
+                            let cleanNum = numMatch ? numMatch[0].padStart(2, '0') : rawSheetString.padStart(2, '0');
+                            idVal = `Plaza Street Food Stall - ${cleanNum}`;
+                        }
+                    } else {
+                        let parts = rawSheetString.split('-');
+                        if (parts.length === 2) {
+                            idVal = `${parts[0].trim()} - ${parts[1].trim().padStart(2, '0')}`;
+                        } else {
+                            idVal = rawSheetString;
+                        }
+                    }
+                }
+                if (cleanKey === 'tenantname' || cleanKey === 'vendor') vendorVal = r[key];
+                if (cleanKey === 'storename' || cleanKey === 'store') storeVal = r[key];
+                if (cleanKey === 'category') catVal = r[key];
+                if (cleanKey === 'stallstatus' || cleanKey === 'status') statusVal = r[key];
+                if (cleanKey === 'paymentstatus' || cleanKey === 'payment') paymentVal = r[key];
+                if (cleanKey === 'email') emailVal = r[key];
+                if (cleanKey === 'contactnumber' || cleanKey === 'phone') phoneVal = r[key];
+                if (cleanKey === 'completeaddress' || cleanKey === 'address') addVal = r[key];
+                if (cleanKey === 'marketclearance') clearVal = r[key];
+                if (cleanKey === 'stallnumber') stallVal = r[key];
+                if (cleanKey === 'duedate') dueDateVal = r[key];
+                if (cleanKey === 'businessregistration') busregVal = r[key];
+                if (cleanKey === 'sanitationpermit') sancertVal = r[key];
+                if (cleanKey === 'firesafety') firesafVal = r[key];
+                if (cleanKey === 'healthclearance') healthclearVal = r[key];
+                if (cleanKey === 'environmentalcertificate') envicertVal = r[key];
+            }
+            if (idVal) {
+                targetMap.set(idVal, {
+                    vendor: vendorVal || 'Vacant / Unassigned', 
+                    store: storeVal || 'N/A', 
+                    category: catVal || 'N/A', 
+                    status: statusVal || 'Vacant', 
+                    payment: paymentVal || 'N/A', 
+                    dueDate: formatDueDate(dueDateVal), 
+                    email: emailVal || 'N/A', 
+                    phone: phoneVal || 'N/A', 
+                    address: addVal || 'N/A', 
+                    clearance: clearVal|| 'N/A', 
+                    stallnum: stallVal || 'N/A', 
+                    businessregis: busregVal || 'N/A', 
+                    sanitation: sancertVal || 'N/A', 
+                    fire: firesafVal || 'N/A', 
+                    health: healthclearVal || 'N/A', 
+                    envicert: envicertVal || 'N/A',
+                });
+            }
+        }
+
+       // Live Spreadsheet 
+        async function syncDatabases() {
+            // Google App Script
+            const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwECm9HZnuiYSbDQbBYOQARjBzKoUM1yc6AqY3BgVV6CeXDkNAVofgmBjJyjV9Zq0/exec"
+            // Market
+            try {
+                const res1 = await fetch(`${WEB_APP_URL}?sheet=Public Market`);
+                const rows1 = await res1.json();
+                if (rows1.error) throw new Error(rows1.error);
+                
+                liveDataMapMarket.clear();
+                rows1.forEach(r => mapSheetRow(r, liveDataMapMarket, 'market'));
+                console.log("Market database updated via Apps Script.");
+            } catch(err) {
+                console.warn("Market sheet sync failed:", err);
+            }
+
+            // Plaza/ street foods
+            try {
+                const res2 = await fetch(`${WEB_APP_URL}?sheet=Street Foods`);
+                const rows2 = await res2.json();
+                if (rows2.error) throw new Error(rows2.error);
+
+                liveDataMapPlaza.clear();
+                rows2.forEach(r => mapSheetRow(r, liveDataMapPlaza, 'plaza'));
+                console.log("Plaza database updated via Apps Script.");
+            } catch(err) {
+                console.warn("Plaza sheet sync failed:", err);
+            }
+
+            refreshAllMapColors();
+        }
+
+        await syncDatabases();
+        setInterval(syncDatabases, 5000); 
+    }
+
+    startApp();
+});
+    </script>
+</body>
+</html>
